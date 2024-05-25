@@ -231,3 +231,11 @@ extension EnvironmentValues {
         set { self[LineColorKey.self] = newValue }
     }
 }
+
+// MARK: - Modifiers for Styling
+@available(iOS 13.0, *)
+extension PointChart {
+    public func lineColor(_ color: Color) -> some View {
+        self.modifier(LineChartColorModifier(color: color))
+    }
+}
