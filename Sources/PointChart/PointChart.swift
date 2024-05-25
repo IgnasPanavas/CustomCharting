@@ -6,31 +6,34 @@ public struct PointChart: View {
     let dataPoints: [(x: CGFloat, y: CGFloat)]
 
     @Environment(\.lineColor) var lineColor: Color
+    @Environment(\.showAxisLabels) var showAxisLabels: Bool
+    @Environment(\.pointColor) var pointColor: Color
+    @Environment(\.lineStyle) var lineStyle: StrokeStyle
+    @Environment(\.axisColor) var axisColor: Color
     
-    /// Customization options for the chart's appearance.
-    var chartStyle: ChartStyle
+
     
     /// Initializes a PointChart.
     /// - Parameters:
     ///   - dataPoints: The data points to plot.
     ///   - chartStyle: Customization options for the chart's appearance.
-    public init(dataPoints: [(x: CGFloat, y: CGFloat)], chartStyle: ChartStyle = ChartStyle()) {
+    public init(dataPoints: [(x: CGFloat, y: CGFloat)]) {
         self.dataPoints = dataPoints
-        self.chartStyle = chartStyle
     }
     
     public var body: some View {
         GeometryReader { geometry in
             ZStack {
                 ChartContent(dataPoints: dataPoints, geometry: geometry)
-                    .stroke(lineColor, style: chartStyle.lineStyle)
+                    .stroke(lineColor, style: lineStyle)
 
-                PointsOverlay(dataPoints: dataPoints, geometry: geometry, chartStyle: chartStyle)
+                PointsOverlay(dataPoints: dataPoints, geometry: geometry, pointColor: pointColor)
 
                 ChartAxes(
                     dataPoints: dataPoints,
                     geometry: geometry,
-                    chartStyle: chartStyle
+                    axisColor: axisColor,
+                    showAxisLabels: showAxisLabels
                 )
             }
             .padding()
@@ -38,40 +41,6 @@ public struct PointChart: View {
     }
 }
 
-/// Customization options for the chart's appearance.
-@available(iOS 13.0, *)
-public struct ChartStyle {
-    /// The color of the line connecting data points.
-    public var lineColor: Color
-
-    /// The style of the line connecting data points.
-    public var lineStyle: StrokeStyle
-
-    /// The color of the data point markers.
-    public var pointColor: Color
-
-    /// Whether to display axis labels.
-    public var showAxisLabels: Bool
-
-    /// The color of the chart's axes.
-    public var axisColor: Color
-    
-
-    /// Initializes a ChartStyle with default values.
-    public init(
-        lineColor: Color = .blue,
-        lineStyle: StrokeStyle = StrokeStyle(lineWidth: 2, lineCap: .round),
-        pointColor: Color = .red,
-        showAxisLabels: Bool = true,
-        axisColor: Color = .gray
-    ) {
-        self.lineColor = lineColor
-        self.lineStyle = lineStyle
-        self.pointColor = pointColor
-        self.showAxisLabels = showAxisLabels
-        self.axisColor = axisColor
-    }
-}
 
 /// The main chart content, drawing the line connecting the data points.
 @available(iOS 13.0, *)
@@ -104,14 +73,14 @@ private struct ChartContent: Shape {
 private struct PointsOverlay: View {
     let dataPoints: [(x: CGFloat, y: CGFloat)]
     let geometry: GeometryProxy
-    var chartStyle: ChartStyle // Pass chartStyle instead of just fillColor
+    var pointColor: Color
     
     var body: some View {
         let (xMin, xMax, yMin, yMax) = normalizeData(dataPoints)
 
         ForEach(dataPoints, id: \.x) { point in
             Circle()
-                .fill(chartStyle.pointColor) // Use chartStyle.pointColor here
+                .fill(pointColor) // Use chartStyle.pointColor here
                 .frame(width: 8, height: 8)
                 .position(
                     x: xPosition(for: point.x, xMin: xMin, xMax: xMax, width: geometry.size.width),
@@ -127,8 +96,11 @@ private struct PointsOverlay: View {
 private struct ChartAxes: View {
     let dataPoints: [(x: CGFloat, y: CGFloat)]
     let geometry: GeometryProxy
-    var chartStyle: ChartStyle
-
+    
+    var axisColor: Color
+    
+    var showAxisLabels: Bool
+    
     var body: some View {
         let (xMin, xMax, yMin, yMax) = normalizeData(dataPoints)
 
@@ -139,7 +111,7 @@ private struct ChartAxes: View {
                 path.move(to: CGPoint(x: 0, y: yZero))
                 path.addLine(to: CGPoint(x: geometry.size.width, y: yZero))
             }
-            .stroke(chartStyle.axisColor, style: StrokeStyle(lineWidth: 1))
+            .stroke(axisColor, style: StrokeStyle(lineWidth: 1))
 
             // Y-Axis
             Path { path in
@@ -147,9 +119,9 @@ private struct ChartAxes: View {
                 path.move(to: CGPoint(x: xZero, y: geometry.size.height))
                 path.addLine(to: CGPoint(x: xZero, y: 0))
             }
-            .stroke(chartStyle.axisColor, style: StrokeStyle(lineWidth: 1))
+            .stroke(axisColor, style: StrokeStyle(lineWidth: 1))
 
-            if chartStyle.showAxisLabels {
+            if showAxisLabels {
                 Text("(0, 0)")
                     .font(.caption)
                     .position(
@@ -206,36 +178,96 @@ private func yPosition(for value: CGFloat, yMin: CGFloat, yMax: CGFloat, height:
     return height - (normalizedY * height)
 }
 
-// MARK: - LineChartColorModifier
-@available(iOS 13.0, *)
-private struct LineChartColorModifier: ViewModifier {
-    let color: Color
 
+// MARK: - Modifier Structs
+@available(iOS 13.0, *)
+private struct LineColorModifier: ViewModifier {
+    let color: Color
     func body(content: Content) -> some View {
-        content
-            .environment(\.lineColor, color) // Set the environment value here
+        content.environment(\.lineColor, color)
     }
 }
 
-// MARK: - Environment Key
 @available(iOS 13.0, *)
-private struct LineColorKey: EnvironmentKey {
-    static let defaultValue = Color.blue // Default line color
+private struct LineStyleModifier: ViewModifier {
+    let style: StrokeStyle
+    func body(content: Content) -> some View {
+        content.environment(\.lineStyle, style)
+    }
 }
 
-// MARK: - EnvironmentValues Extension
+@available(iOS 13.0, *)
+private struct PointColorModifier: ViewModifier {
+    let color: Color
+    func body(content: Content) -> some View {
+        content.environment(\.pointColor, color)
+    }
+}
+
+@available(iOS 13.0, *)
+private struct ShowAxisLabelsModifier: ViewModifier {
+    let show: Bool
+    func body(content: Content) -> some View {
+        content.environment(\.showAxisLabels, show)
+    }
+}
+
+@available(iOS 13.0, *)
+private struct AxisColorModifier: ViewModifier {
+    let color: Color
+    func body(content: Content) -> some View {
+        content.environment(\.axisColor, color)
+    }
+}
+
+// MARK: - Environment Keys
+@available(iOS 13.0, *)
+private struct PointColorKey: EnvironmentKey {
+    static let defaultValue = Color.red
+}
+
+@available(iOS 13.0, *)
+private struct LineStyleKey: EnvironmentKey {
+    static let defaultValue = StrokeStyle(lineWidth: 2)
+}
+
+@available(iOS 13.0, *)
+private struct LineColorKey: EnvironmentKey {
+    static let defaultValue = Color.red
+}
+
+@available(iOS 13.0, *)
+private struct ShowAxisLabelsKey: EnvironmentKey {
+    static let defaultValue = true
+}
+
+@available(iOS 13.0, *)
+private struct AxisColorKey: EnvironmentKey {
+    static let defaultValue = Color.gray
+}
+
 @available(iOS 13.0, *)
 extension EnvironmentValues {
+    var pointColor: Color {
+        get { self[PointColorKey.self] }
+        set { self[PointColorKey.self] = newValue }
+    }
+
+    var showAxisLabels: Bool {
+        get { self[ShowAxisLabelsKey.self] }
+        set { self[ShowAxisLabelsKey.self] = newValue }
+    }
+
+    var axisColor: Color {
+        get { self[AxisColorKey.self] }
+        set { self[AxisColorKey.self] = newValue }
+    }
+    var lineStyle: StrokeStyle {
+        get { self[LineStyleKey.self] }
+        set { self[LineStyleKey.self] = newValue }
+    }
     var lineColor: Color {
         get { self[LineColorKey.self] }
         set { self[LineColorKey.self] = newValue }
-    }
-}
-
-// MARK: - Modifiers for Styling
-@available(iOS 13.0, *)
-extension PointChart {
-    public func lineColor(_ color: Color) -> some View {
-        self.modifier(LineChartColorModifier(color: color))
     }
 }
