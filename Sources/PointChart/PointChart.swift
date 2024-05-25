@@ -1,13 +1,17 @@
 import SwiftUI
 
+@available(iOS 13.0, *)
 public struct PointChart: View {
     let dataPoints: [(x: CGFloat, y: CGFloat)]
-
-    public init(dataPoints: [(x: CGFloat, y: CGFloat)]) {
+    let showAxisLabels: Bool
+    let axisColor: Color
+    
+    public init(dataPoints: [(x: CGFloat, y: CGFloat)], showAxisLabels: Bool = true, axisColor: Color = .gray) {
         self.dataPoints = dataPoints
+        self.showAxisLabels = showAxisLabels
+        self.axisColor = axisColor
     }
 
-    @available(iOS 13.0.0, *)
     public var body: some View {
         GeometryReader { geometry in
             ZStack {
@@ -46,6 +50,27 @@ public struct PointChart: View {
                         .position(x: normalizedX * geometry.size.width,
                                   y: geometry.size.height - (normalizedY * geometry.size.height))
                 }
+                // X-Axis
+                Path { path in
+                    path.move(to: CGPoint(x: 0, y: geometry.size.height))
+                    path.addLine(to: CGPoint(x: geometry.size.width, y: geometry.size.height))
+                }
+                .stroke(axisColor, style: StrokeStyle(lineWidth: 1)) // Customize axis color
+                
+                // Y-Axis
+                Path { path in
+                    path.move(to: CGPoint(x: 0, y: geometry.size.height))
+                    path.addLine(to: CGPoint(x: 0, y: 0))
+                }
+                .stroke(axisColor, style: StrokeStyle(lineWidth: 1)) // Customize axis color
+                
+                if showAxisLabels {
+                    // Origin Label (optional)
+                    Text("(0, 0)")
+                        .font(.caption)
+                        .position(x: 10, y: geometry.size.height - 10) // Adjust position
+                }
+                
             }
             .padding() // Add padding around the chart
         }
