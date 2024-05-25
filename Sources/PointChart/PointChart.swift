@@ -5,6 +5,8 @@ public struct PointChart: View {
     /// The data points to be plotted on the chart.
     let dataPoints: [(x: CGFloat, y: CGFloat)]
 
+    @Environment(\.lineColor) var lineColor: Color
+    
     /// Customization options for the chart's appearance.
     var chartStyle: ChartStyle
     
@@ -21,7 +23,7 @@ public struct PointChart: View {
         GeometryReader { geometry in
             ZStack {
                 ChartContent(dataPoints: dataPoints, geometry: geometry)
-                    .stroke(chartStyle.lineColor, style: chartStyle.lineStyle)
+                    .stroke(lineColor, style: chartStyle.lineStyle)
 
                 PointsOverlay(dataPoints: dataPoints, geometry: geometry, chartStyle: chartStyle)
 
@@ -204,92 +206,28 @@ private func yPosition(for value: CGFloat, yMin: CGFloat, yMax: CGFloat, height:
     return height - (normalizedY * height)
 }
 
-// MARK: - Modifiers for Styling
+// MARK: - LineChartColorModifier
 @available(iOS 13.0, *)
-extension PointChart {
-    /*public func lineColor(_ color: Color) -> some View {
-        self.modifier(LineChartColorModifier(color: color))
-    }
-
-    public func lineStyle(_ style: StrokeStyle) -> some View {
-        self.modifier(LineStyleModifier(style: style))
-    }
-*/
-    public func pointColor(_ color: Color) -> some View {
-        self.modifier(PointColorModifier(color: color))
-    }
-
-    public func showAxisLabels(_ show: Bool) -> some View {
-        self.modifier(ShowAxisLabelsModifier(show: show))
-    }
-
-    public func axisColor(_ color: Color) -> some View {
-        self.modifier(AxisColorModifier(color: color))
-    }
-}
-/*
-@available(iOS 13.0, *)
-private struct LineStyleModifier: ViewModifier {
-    let style: StrokeStyle
-    func body(content: Content) -> some View {
-        content.stroke(style: style)
-    }
-}
-*/
-@available(iOS 13.0, *)
-private struct PointColorModifier: ViewModifier {
+private struct LineChartColorModifier: ViewModifier {
     let color: Color
+
     func body(content: Content) -> some View {
-        content.environment(\.pointColor, color)
+        content
+            .environment(\.lineColor, color) // Set the environment value here
     }
 }
 
+// MARK: - Environment Key
 @available(iOS 13.0, *)
-private struct ShowAxisLabelsModifier: ViewModifier {
-    let show: Bool
-    func body(content: Content) -> some View {
-        content.environment(\.showAxisLabels, show)
-    }
+private struct LineColorKey: EnvironmentKey {
+    static let defaultValue = Color.blue // Default line color
 }
 
-@available(iOS 13.0, *)
-private struct AxisColorModifier: ViewModifier {
-    let color: Color
-    func body(content: Content) -> some View {
-        content.environment(\.axisColor, color)
-    }
-}
-
-// MARK: - Environment Keys
-@available(iOS 13.0, *)
-private struct PointColorKey: EnvironmentKey {
-    static let defaultValue = Color.red
-}
-
-@available(iOS 13.0, *)
-private struct ShowAxisLabelsKey: EnvironmentKey {
-    static let defaultValue = true
-}
-
-@available(iOS 13.0, *)
-private struct AxisColorKey: EnvironmentKey {
-    static let defaultValue = Color.gray
-}
-
+// MARK: - EnvironmentValues Extension
 @available(iOS 13.0, *)
 extension EnvironmentValues {
-    var pointColor: Color {
-        get { self[PointColorKey.self] }
-        set { self[PointColorKey.self] = newValue }
-    }
-
-    var showAxisLabels: Bool {
-        get { self[ShowAxisLabelsKey.self] }
-        set { self[ShowAxisLabelsKey.self] = newValue }
-    }
-
-    var axisColor: Color {
-        get { self[AxisColorKey.self] }
-        set { self[AxisColorKey.self] = newValue }
+    var lineColor: Color {
+        get { self[LineColorKey.self] }
+        set { self[LineColorKey.self] = newValue }
     }
 }
