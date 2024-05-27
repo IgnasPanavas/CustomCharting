@@ -67,7 +67,6 @@ private struct ChartContent: Shape {
     }
 }
 
-
 /// The overlay of circles representing individual data points.
 @available(iOS 13.0, *)
 private struct PointsOverlay: View {
@@ -274,7 +273,7 @@ extension EnvironmentValues {
 
 // MARK: - Modifiers for Styling
 @available(iOS 13.0, *)
-extension PointChart {
+extension View {
     public func lineColor(_ color: Color) -> some View {
         self.modifier(LineColorModifier(color: color))
     }
