@@ -10,6 +10,7 @@ public struct PointChart: View {
     @Environment(\.pointColor) var pointColor: Color
     @Environment(\.lineStyle) var lineStyle: StrokeStyle
     @Environment(\.axisColor) var axisColor: Color
+    @Environment(\.showPoints) var showPoints: Bool
     
 
     
@@ -28,6 +29,7 @@ public struct PointChart: View {
                     .stroke(lineColor, style: lineStyle)
 
                 PointsOverlay(dataPoints: dataPoints, geometry: geometry, pointColor: pointColor)
+                    .opacity(showPoints ? 1 : 0)
 
                 ChartAxes(
                     dataPoints: dataPoints,
@@ -212,6 +214,14 @@ private struct ShowAxisLabelsModifier: ViewModifier {
 }
 
 @available(iOS 13.0, *)
+private struct ShowPointsModifier: ViewModifier {
+    let show: Bool
+    func body(content: Content) -> some View {
+        content.environment(\.showPoints, show)
+    }
+}
+
+@available(iOS 13.0, *)
 private struct AxisColorModifier: ViewModifier {
     let color: Color
     func body(content: Content) -> some View {
@@ -237,6 +247,11 @@ private struct LineColorKey: EnvironmentKey {
 
 @available(iOS 13.0, *)
 private struct ShowAxisLabelsKey: EnvironmentKey {
+    static let defaultValue = true
+}
+
+@available(iOS 13.0, *)
+private struct ShowPointsKey: EnvironmentKey {
     static let defaultValue = true
 }
 
@@ -269,6 +284,10 @@ extension EnvironmentValues {
         get { self[LineColorKey.self] }
         set { self[LineColorKey.self] = newValue }
     }
+    var showPoints: Bool {
+        get { self[ShowPointsKey.self] }
+        set { self[ShowPointsKey.self] = newValue }
+    }
 }
 
 // MARK: - Modifiers for Styling
@@ -288,6 +307,10 @@ extension View {
 
     public func showAxisLabels(_ show: Bool) -> some View {
         self.modifier(ShowAxisLabelsModifier(show: show))
+    }
+    
+    public func showPoints(_ show: Bool) -> some View {
+        self.modifier(ShowPointsModifier(show: show))
     }
 
     public func axisColor(_ color: Color) -> some View {
