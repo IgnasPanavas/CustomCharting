@@ -44,7 +44,7 @@ public struct DataPoint<X: Plottable, Y: Plottable>: Identifiable, Hashable wher
 // MARK: - LineChart (Struct)
 
 @available(iOS 13.0, *)
-public struct LineChart<XValue: Plottable & Hashable, YValue: Plottable & Hashable>: Chart {
+public struct LineChart<XValue: Plottable & Hashable, YValue: Plottable & Hashable>: Chart, View {
     // LineChart composes BaseChart
     var baseChart: BaseChart<XValue, YValue>
 
@@ -75,6 +75,10 @@ public struct LineChart<XValue: Plottable & Hashable, YValue: Plottable & Hashab
 
     public func chartAxes(in geometry: GeometryProxy) -> some View {
         return baseChart.chartAxes(in: geometry)
+    }
+    
+    public var body: some View {
+        baseChart.body
     }
 }
 
