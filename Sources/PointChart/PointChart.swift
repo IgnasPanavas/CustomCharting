@@ -48,6 +48,20 @@ public class BaseLineChart<XValue: Plottable & Hashable, YValue: Plottable & Has
 }
 
 @available(iOS 13.0, *)
+public final class LineChart<XValue: Plottable & Hashable, YValue: Plottable & Hashable>: BaseChart<XValue, YValue>, View {
+    
+    public override init(dataPoints: [DataPoint<XValue, YValue>]) {
+        super.init(dataPoints: dataPoints)
+    }
+
+    // Overrides plotContent for Line Charts
+    public override func plotContent(in geometry: GeometryProxy) -> ChartContent {
+        return ChartContent(dataPoints: dataPoints.map(\.dataPoint), geometry: geometry) // No need to store cgFloatDataPoints separately anymore
+    }
+   
+}
+
+@available(iOS 13.0, *)
 public class BaseChart<XValue: Plottable & Hashable, YValue: Plottable & Hashable>: Chart {
     public let dataPoints: [DataPoint<XValue, YValue>]
     public var showAxisLabels = true
@@ -88,19 +102,23 @@ public class BaseChart<XValue: Plottable & Hashable, YValue: Plottable & Hashabl
             ChartContent(dataPoints: dataPoints.map(\.dataPoint), geometry: geometry) // No need to store cgFloatDataPoints separately anymore
         }
 
+        public func baseBody(in geometry: GeometryProxy) -> some View {
+            ZStack {
+                self.plotContent(in: geometry)
+                    .stroke(self.lineColor, style: self.lineStyle)  // Apply line styling
+
+                if self.showPoints {
+                    PointsOverlay(dataPoints: self.dataPoints, geometry: geometry, pointColor: self.pointColor)
+                }
+                
+                self.chartAxes(in: geometry)
+            }
+            .padding()
+        }
+
         public var body: some View {
             GeometryReader { geometry in
-                ZStack {
-                    self.plotContent(in: geometry)
-                        .stroke(self.lineColor, style: self.lineStyle)  // Apply line styling
-
-                    if self.showPoints {
-                        PointsOverlay(dataPoints: self.dataPoints, geometry: geometry, pointColor: self.pointColor)
-                    }
-                    
-                    self.chartAxes(in: geometry)
-                }
-                .padding()
+                self.baseBody(in: geometry)
             }
         }
 }
