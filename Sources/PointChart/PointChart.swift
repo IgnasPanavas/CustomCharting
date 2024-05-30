@@ -41,44 +41,60 @@ public struct DataPoint<X: Plottable, Y: Plottable>: Identifiable, Hashable wher
     }
 }
 
+// MARK: - LineChart (Struct)
 
 @available(iOS 13.0, *)
-public class BaseLineChart<XValue: Plottable & Hashable, YValue: Plottable & Hashable>: BaseChart<XValue, YValue> {
-    
-}
+public struct LineChart<XValue: Plottable & Hashable, YValue: Plottable & Hashable>: Chart {
+    // LineChart composes BaseChart
+    var baseChart: BaseChart<XValue, YValue>
 
-@available(iOS 13.0, *)
-public final class LineChart<XValue: Plottable & Hashable, YValue: Plottable & Hashable>: BaseChart<XValue, YValue>, View {
+    public var dataPoints: [DataPoint<XValue, YValue>] { baseChart.dataPoints }
+    public var showAxisLabels: Bool {
+        get { baseChart.showAxisLabels }
+        set { baseChart.showAxisLabels = newValue }
+    }
+    public var axisColor: Color {
+        get { baseChart.axisColor }
+        set { baseChart.axisColor = newValue }
+    }
+    public typealias ContentView = ChartContent
     
-    public override init(dataPoints: [DataPoint<XValue, YValue>]) {
-        super.init(dataPoints: dataPoints)
+    public init(dataPoints: [DataPoint<XValue, YValue>]) {
+        self.baseChart = BaseChart(dataPoints: dataPoints)
     }
 
-    // Overrides plotContent for Line Charts
-    public override func plotContent(in geometry: GeometryProxy) -> ChartContent {
-        return ChartContent(dataPoints: dataPoints.map(\.dataPoint), geometry: geometry) // No need to store cgFloatDataPoints separately anymore
+    // LineChart-specific plotContent implementation
+    public func plotContent(in geometry: GeometryProxy) -> ChartContent {
+        ChartContent(dataPoints: dataPoints.map(\.dataPoint), geometry: geometry)
     }
-   
+
+    // Inherit other properties and methods directly from BaseChart using baseChart
+    public func normalizeData() -> (xMin: CGFloat, xMax: CGFloat, yMin: CGFloat, yMax: CGFloat) {
+        return baseChart.normalizeData()
+    }
+
+    public func chartAxes(in geometry: GeometryProxy) -> some View {
+        return baseChart.chartAxes(in: geometry)
+    }
 }
 
+
 @available(iOS 13.0, *)
-public class BaseChart<XValue: Plottable & Hashable, YValue: Plottable & Hashable>: Chart {
+public struct BaseChart<XValue: Plottable & Hashable, YValue: Plottable & Hashable>: Chart {
     public let dataPoints: [DataPoint<XValue, YValue>]
     public var showAxisLabels = true
     public var axisColor = Color.gray
-
-    // Stylistic properties moved from PointChart
+    // Stylistic properties
     @Environment(\.lineColor) var lineColor: Color
     @Environment(\.pointColor) var pointColor: Color
     @Environment(\.lineStyle) var lineStyle: StrokeStyle
-    @Environment(\.showPoints) var showPoints: Bool // Now in BaseChart
-    
+    @Environment(\.showPoints) var showPoints: Bool
+
     public init(dataPoints: [DataPoint<XValue, YValue>]) {
         self.dataPoints = dataPoints
     }
     
     public typealias ContentView = ChartContent // Declare the associated type
-
         // Implementation for normalizeData
         public func normalizeData() -> (xMin: CGFloat, xMax: CGFloat, yMin: CGFloat, yMax: CGFloat) {
             let xValues = dataPoints.map { $0.x.toCGFloat() }
@@ -97,31 +113,25 @@ public class BaseChart<XValue: Plottable & Hashable, YValue: Plottable & Hashabl
             ChartAxes(dataPoints: dataPoints.map(\.dataPoint), geometry: geometry, axisColor: axisColor, showAxisLabels: showAxisLabels)
         }
 
-    // plotContent implementation for Line Charts
+    // Plotting Logic (To be customized per chart type)
         public func plotContent(in geometry: GeometryProxy) -> ChartContent {
-            ChartContent(dataPoints: dataPoints.map(\.dataPoint), geometry: geometry) // No need to store cgFloatDataPoints separately anymore
+            fatalError("plotContent() must be implemented by the specific chart type.")
         }
-
-        public func baseBody(in geometry: GeometryProxy) -> some View {
-            ZStack {
-                self.plotContent(in: geometry)
-                    .stroke(self.lineColor, style: self.lineStyle)  // Apply line styling
-
-                if self.showPoints {
-                    PointsOverlay(dataPoints: self.dataPoints, geometry: geometry, pointColor: self.pointColor)
-                }
-                
-                self.chartAxes(in: geometry)
-            }
-            .padding()
-        }
-
+        
         public var body: some View {
             GeometryReader { geometry in
-                self.baseBody(in: geometry)
+                ZStack {
+                    plotContent(in: geometry)
+                        .stroke(lineColor, style: lineStyle)
+                    if showPoints {
+                        PointsOverlay(dataPoints: dataPoints, geometry: geometry, pointColor: pointColor)
+                    }
+                    chartAxes(in: geometry)
+                }
+                .padding()
             }
         }
-}
+    }
 
 /// The main chart content, drawing the line connecting the data points.
 @available(iOS 13.0, *)
