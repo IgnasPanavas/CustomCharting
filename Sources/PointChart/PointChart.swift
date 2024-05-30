@@ -28,7 +28,11 @@ public struct DataPoint<X: Plottable, Y: Plottable>: Identifiable, Hashable wher
     public let y: Y
 
     var dataPoint: (CGFloat, CGFloat) { (x.toCGFloat(), y.toCGFloat()) }
-
+    
+    public init(x: X, y: Y) {
+        self.x = x
+        self.y = y
+    }
     // Hashable conformance
     public func hash(into hasher: inout Hasher) {
         hasher.combine(id) // Use the unique id for hashing
