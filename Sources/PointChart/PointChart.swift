@@ -1,18 +1,26 @@
 import SwiftUI
 
-/// Defines the interface for data that can be plotted on the chart.
-public protocol ChartData: Hashable {
-    /// The x-axis value of the data point.
-    var xValue: CGFloat { get }
-    /// The y-axis value of the data point.
-    var yValue: CGFloat { get }
+public protocol Plottable: Comparable {
+    /// Converts the Plottable value to a CGFloat for plotting.
+    func toCGFloat() -> CGFloat
+}
+
+public struct DataPoint: Identifiable, Hashable {
+    public let id = UUID()
+    public let x: CGFloat
+    public let y: CGFloat
 }
 
 @available(iOS 13.0, *)
-public struct PointChart: View {
-    /// The data points to be plotted on the chart.
-    let dataPoints: [any ChartData]
+public protocol ChartData: Identifiable, Hashable {
+    var dataPoint: DataPoint { get }
+}
 
+@available(iOS 13.0, *)
+public struct PointChart<T: ChartData>: View {
+    /// The data points to be plotted on the chart.
+    let dataPoints: [T]
+    
     @Environment(\.lineColor) var lineColor: Color
     @Environment(\.showAxisLabels) var showAxisLabels: Bool
     @Environment(\.pointColor) var pointColor: Color
@@ -20,13 +28,13 @@ public struct PointChart: View {
     @Environment(\.axisColor) var axisColor: Color
     @Environment(\.showPoints) var showPoints: Bool
     
-
+    
     
     /// Initializes a PointChart.
     /// - Parameters:
     ///   - dataPoints: The data points to plot.
     ///   - chartStyle: Customization options for the chart's appearance.
-    public init(dataPoints: [any ChartData]) {
+    public init(dataPoints: [T]) {
             self.dataPoints = dataPoints
         }
     public var body: some View {
@@ -53,8 +61,8 @@ public struct PointChart: View {
 
 /// The main chart content, drawing the line connecting the data points.
 @available(iOS 13.0, *)
-private struct ChartContent: Shape {
-    let dataPoints: [any ChartData]
+private struct ChartContent<T: ChartData>: Shape {
+    let dataPoints: [T]
     let geometry: GeometryProxy
 
     func path(in rect: CGRect) -> Path {
@@ -62,13 +70,13 @@ private struct ChartContent: Shape {
 
         var path = Path()
 
-        let startX = xPosition(for: dataPoints[0].xValue, xMin: xMin, xMax: xMax, width: geometry.size.width)
-        let startY = yPosition(for: dataPoints[0].yValue, yMin: yMin, yMax: yMax, height: geometry.size.height)
+        let startX = xPosition(for: dataPoints[0].dataPoint, xMin: xMin, xMax: xMax, width: geometry.size.width)
+        let startY = yPosition(for: dataPoints[0].dataPoint, yMin: yMin, yMax: yMax, height: geometry.size.height)
         path.move(to: CGPoint(x: startX, y: startY))
 
         for point in dataPoints {
-            let x = xPosition(for: point.xValue, xMin: xMin, xMax: xMax, width: geometry.size.width)
-            let y = yPosition(for: point.yValue, yMin: yMin, yMax: yMax, height: geometry.size.height)
+            let x = xPosition(for: point.dataPoint, xMin: xMin, xMax: xMax, width: geometry.size.width)
+            let y = yPosition(for: point.dataPoint, yMin: yMin, yMax: yMax, height: geometry.size.height)
             path.addLine(to: CGPoint(x: x, y: y))
         }
 
@@ -78,21 +86,21 @@ private struct ChartContent: Shape {
 
 /// The overlay of circles representing individual data points.
 @available(iOS 13.0, *)
-private struct PointsOverlay: View {
-    let dataPoints: [any ChartData]
+private struct PointsOverlay<T: ChartData>: View {
+    let dataPoints: [T]
     let geometry: GeometryProxy
     var pointColor: Color
     
     var body: some View {
         let (xMin, xMax, yMin, yMax) = normalizeData(dataPoints)
 
-        ForEach(dataPoints, id: \.xValue) { point in
+        ForEach(dataPoints, id: \.self) { point in // Use .self as identifier
             Circle()
-                .fill(pointColor) // Use chartStyle.pointColor here
+                .fill(pointColor)
                 .frame(width: 8, height: 8)
                 .position(
-                    x: xPosition(for: point.xValue, xMin: xMin, xMax: xMax, width: geometry.size.width),
-                    y: yPosition(for: point.yValue, yMin: yMin, yMax: yMax, height: geometry.size.height)
+                    x: xPosition(for: point.dataPoint, xMin: xMin, xMax: xMax, width: geometry.size.width),
+                    y: yPosition(for: point.dataPoint, yMin: yMin, yMax: yMax, height: geometry.size.height)
                 )
         }
     }
@@ -101,8 +109,8 @@ private struct PointsOverlay: View {
 
 /// The X and Y axes for the chart.
 @available(iOS 13.0, *)
-private struct ChartAxes: View {
-    let dataPoints: [any ChartData]
+private struct ChartAxes<T: ChartData>: View {
+    let dataPoints: [T]
     let geometry: GeometryProxy
     
     var axisColor: Color
@@ -115,7 +123,7 @@ private struct ChartAxes: View {
         ZStack {
             // X-Axis
             Path { path in
-                let yZero = yPosition(for: 0, yMin: yMin, yMax: yMax, height: geometry.size.height)
+                let yZero = yPosition(for: DataPoint(x: 0, y: 0), yMin: yMin, yMax: yMax, height: geometry.size.height)
                 path.move(to: CGPoint(x: 0, y: yZero))
                 path.addLine(to: CGPoint(x: geometry.size.width, y: yZero))
             }
@@ -123,7 +131,7 @@ private struct ChartAxes: View {
 
             // Y-Axis
             Path { path in
-                let xZero = xPosition(for: 0, xMin: xMin, xMax: xMax, width: geometry.size.width)
+                let xZero = xPosition(for: DataPoint(x: 0, y: 0), xMin: xMin, xMax: xMax, width: geometry.size.width)
                 path.move(to: CGPoint(x: xZero, y: geometry.size.height))
                 path.addLine(to: CGPoint(x: xZero, y: 0))
             }
@@ -133,8 +141,8 @@ private struct ChartAxes: View {
                 Text("(0, 0)")
                     .font(.caption)
                     .position(
-                        x: xPosition(for: 0, xMin: xMin, xMax: xMax, width: geometry.size.width) + 10,
-                        y: yPosition(for: 0, yMin: yMin, yMax: yMax, height: geometry.size.height) - 10
+                        x: xPosition(for: DataPoint(x: 0.0,y: 0.0), xMin: xMin, xMax: xMax, width: geometry.size.width) + 10,
+                        y: yPosition(for: DataPoint(x: 0,y: 0), yMin: yMin, yMax: yMax, height: geometry.size.height) - 10
                     )
             }
         }
@@ -148,9 +156,9 @@ private struct ChartAxes: View {
 /// - Parameter dataPoints: The data points to normalize.
 /// - Returns: A tuple containing the normalized minimum and maximum x and y values.
 @available(iOS 13.0, *)
-private func normalizeData(_ dataPoints: [any ChartData]) -> (xMin: CGFloat, xMax: CGFloat, yMin: CGFloat, yMax: CGFloat) {
-    let xValues = dataPoints.map(\.xValue)
-    let yValues = dataPoints.map(\.yValue)
+private func normalizeData<T: ChartData>(_ dataPoints: [T]) -> (xMin: CGFloat, xMax: CGFloat, yMin: CGFloat, yMax: CGFloat) {
+    let xValues = dataPoints.map(\.dataPoint.x)
+    let yValues = dataPoints.map(\.dataPoint.y)
     
     let xMin = xValues.min()!
     let xMax = xValues.max()!
@@ -169,8 +177,8 @@ private func normalizeData(_ dataPoints: [any ChartData]) -> (xMin: CGFloat, xMa
 ///   - width: The width of the chart area.
 /// - Returns: The x position within the chart area.
 @available(iOS 13.0, *)
-private func xPosition(for value: CGFloat, xMin: CGFloat, xMax: CGFloat, width: CGFloat) -> CGFloat {
-    let normalizedX = (value - xMin) / max(xMax - xMin, 0.001) // Avoid division by zero
+private func xPosition(for value: DataPoint, xMin: CGFloat, xMax: CGFloat, width: CGFloat) -> CGFloat {
+    let normalizedX = (value.x - xMin) / max(xMax - xMin, 0.001) // Avoid division by zero
     return normalizedX * width
 }
 
@@ -183,8 +191,8 @@ private func xPosition(for value: CGFloat, xMin: CGFloat, xMax: CGFloat, width: 
 ///   - height: The height of the chart area.
 /// - Returns: The y position within the chart area.
 @available(iOS 13.0, *)
-private func yPosition(for value: CGFloat, yMin: CGFloat, yMax: CGFloat, height: CGFloat) -> CGFloat {
-    let normalizedY = (value - yMin) / max(yMax - yMin, 0.001) // Avoid division by zero
+private func yPosition(for value: DataPoint, yMin: CGFloat, yMax: CGFloat, height: CGFloat) -> CGFloat {
+    let normalizedY = (value.y - yMin) / max(yMax - yMin, 0.001) // Avoid division by zero
     return height - (normalizedY * height)
 }
 
