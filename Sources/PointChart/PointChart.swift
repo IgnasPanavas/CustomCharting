@@ -1,12 +1,25 @@
 import SwiftUI
 
-// Generic Plottable Protocol (Modified for Flexibility)
 public protocol Plottable {
     associatedtype Value: Comparable
     var value: Value { get }
-
-    // Conversion now depends on the associated Value type
     func toCGFloat() -> CGFloat
+}
+
+
+// Chart Protocol
+@available(iOS 13.0, *)
+public protocol Chart {
+    associatedtype XValue: Plottable & Hashable
+    associatedtype YValue: Plottable & Hashable
+    associatedtype ContentView: View // Associated type for the content view
+    
+    var dataPoints: [DataPoint<XValue, YValue>] { get }
+    var showAxisLabels: Bool { get }
+    var axisColor: Color { get }
+    
+    func normalizeData() -> (xMin: CGFloat, xMax: CGFloat, yMin: CGFloat, yMax: CGFloat)
+    func plotContent(in geometry: GeometryProxy) -> ContentView // Use the associated type
 }
 
 public struct DataPoint<X: Plottable, Y: Plottable>: Identifiable, Hashable where X: Hashable, Y: Hashable {
@@ -15,11 +28,7 @@ public struct DataPoint<X: Plottable, Y: Plottable>: Identifiable, Hashable wher
     public let y: Y
 
     var dataPoint: (CGFloat, CGFloat) { (x.toCGFloat(), y.toCGFloat()) }
-    
-    public init(x: X, y: Y) {
-        self.x = x
-        self.y = y
-    }
+
     // Hashable conformance
     public func hash(into hasher: inout Hasher) {
         hasher.combine(id) // Use the unique id for hashing
@@ -28,64 +37,77 @@ public struct DataPoint<X: Plottable, Y: Plottable>: Identifiable, Hashable wher
     }
 }
 
+
 @available(iOS 13.0, *)
-public struct PointChart<X: Plottable & Hashable, Y: Plottable & Hashable>: View {
-    /// The data points to be plotted on the chart.
-    let dataPoints: [DataPoint<X, Y>]
+public class BaseLineChart<XValue: Plottable & Hashable, YValue: Plottable & Hashable>: BaseChart<XValue, YValue> {
     
-    
-    private var cgFloatDataPoints: [(CGFloat, CGFloat)]
-    
-    
+}
+
+@available(iOS 13.0, *)
+public class BaseChart<XValue: Plottable & Hashable, YValue: Plottable & Hashable>: Chart {
+    public let dataPoints: [DataPoint<XValue, YValue>]
+    public var showAxisLabels = true
+    public var axisColor = Color.gray
+
+    // Stylistic properties moved from PointChart
     @Environment(\.lineColor) var lineColor: Color
-    @Environment(\.showAxisLabels) var showAxisLabels: Bool
     @Environment(\.pointColor) var pointColor: Color
     @Environment(\.lineStyle) var lineStyle: StrokeStyle
-    @Environment(\.axisColor) var axisColor: Color
-    @Environment(\.showPoints) var showPoints: Bool
+    @Environment(\.showPoints) var showPoints: Bool // Now in BaseChart
     
+    public init(dataPoints: [DataPoint<XValue, YValue>]) {
+        self.dataPoints = dataPoints
+    }
     
-    
-    /// Initializes a PointChart.
-    /// - Parameters:
-    ///   - dataPoints: The data points to plot.
-    ///   - chartStyle: Customization options for the chart's appearance.
-    public init(dataPoints: [DataPoint<X, Y>]) {
-            self.dataPoints = dataPoints
-            self.cgFloatDataPoints = dataPoints.map { ($0.x.toCGFloat(), $0.y.toCGFloat()) }
+    public typealias ContentView = ChartContent // Declare the associated type
+
+        // Implementation for normalizeData
+        public func normalizeData() -> (xMin: CGFloat, xMax: CGFloat, yMin: CGFloat, yMax: CGFloat) {
+            let xValues = dataPoints.map { $0.x.toCGFloat() }
+            let yValues = dataPoints.map { $0.y.toCGFloat() }
+            
+            let xMin = xValues.min() ?? 0
+            let xMax = xValues.max() ?? 0
+            let yMin = yValues.min() ?? 0
+            let yMax = yValues.max() ?? 0
+
+            return (xMin, xMax, yMin, yMax)
         }
-    public var body: some View {
+        
+        // Axes View (common to all chart types)
+        public func chartAxes(in geometry: GeometryProxy) -> some View {
+            ChartAxes(dataPoints: dataPoints.map(\.dataPoint), geometry: geometry, axisColor: axisColor, showAxisLabels: showAxisLabels)
+        }
+
+    // plotContent implementation for Line Charts
+        public func plotContent(in geometry: GeometryProxy) -> ChartContent {
+            ChartContent(dataPoints: dataPoints.map(\.dataPoint), geometry: geometry) // No need to store cgFloatDataPoints separately anymore
+        }
+
+        public var body: some View {
             GeometryReader { geometry in
                 ZStack {
-                    // No need for conversion, DataPoint provides it directly
-                    ChartContent(dataPoints: dataPoints.map(\.dataPoint), geometry: geometry)
-                        .stroke(lineColor, style: lineStyle)
+                    self.plotContent(in: geometry)
+                        .stroke(self.lineColor, style: self.lineStyle)  // Apply line styling
 
-                    // Pass the generic DataPoints
-                    PointsOverlay(dataPoints: dataPoints, geometry: geometry, pointColor: pointColor)
-                        .opacity(showPoints ? 1 : 0)
-
-                    // Pass the generic DataPoints
-                    ChartAxes(
-                        dataPoints: dataPoints.map(\.dataPoint),
-                        geometry: geometry,
-                        axisColor: axisColor,
-                        showAxisLabels: showAxisLabels
-                    )
+                    if self.showPoints {
+                        PointsOverlay(dataPoints: self.dataPoints, geometry: geometry, pointColor: self.pointColor)
+                    }
+                    
+                    self.chartAxes(in: geometry)
                 }
                 .padding()
             }
         }
-    }
-
+}
 
 /// The main chart content, drawing the line connecting the data points.
 @available(iOS 13.0, *)
-private struct ChartContent: Shape {
+public struct ChartContent: Shape {
     let dataPoints: [(CGFloat, CGFloat)]
     let geometry: GeometryProxy
 
-    func path(in rect: CGRect) -> Path {
+    public func path(in rect: CGRect) -> Path {
         let (xMin, xMax, yMin, yMax) = normalizeData(dataPoints)
 
         var path = Path()
