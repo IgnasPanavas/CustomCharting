@@ -9,6 +9,11 @@ public struct DataPoint: Identifiable, Hashable {
     public let id = UUID()
     public let x: CGFloat
     public let y: CGFloat
+    
+    public init(x: CGFloat, y: CGFloat) {  // Now public
+           self.x = x
+           self.y = y
+       }
 }
 
 @available(iOS 13.0, *)
