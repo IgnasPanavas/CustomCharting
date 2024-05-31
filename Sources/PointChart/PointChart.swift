@@ -88,47 +88,60 @@ public struct BarChart<T: DataPoint>: Chart {
     }
 
     public var body: some View {
-        GeometryReader { geometry in
-            ZStack {
-                HStack(spacing: barSpacing) {
-                    ForEach(data.indices, id: \.self) { index in
-                        VStack(alignment: .center) {
-                            let normalizedY = normalizeData(for: geometry.size)[index].y
-                            Rectangle()
-                                .fill(normalizedY >= 0 ? Color.blue : Color.red)
-                                .frame(height: abs(normalizedY))
-                                .offset(y: -normalizedY / 2) // Offset bars to center on baseline
-                            Text(data[index].x.toDouble(), format: .number)
-                                .font(.caption)
+            GeometryReader { geometry in
+                ZStack {
+                    HStack(spacing: barSpacing) {
+                        ForEach(data.indices, id: \.self) { index in
+                            VStack(alignment: .center) {
+                                let barData = normalizedDataWithOffset(for: geometry.size)[index]
+                                Spacer() // Push the bar to the bottom
+                                Rectangle()
+                                    .fill(barData.y >= 0 ? Color.blue : Color.red)
+                                    .frame(height: abs(barData.y))
+                                    .offset(y: -barData.y / 2) // Center the bar on its value
+                                Text(data[index].x.toDouble(), format: .number)
+                                    .font(.caption)
+                            }
                         }
                     }
-                }
-                .padding(.horizontal)
+                    .padding(.horizontal)
 
-                // Draw axes at the center of the chart
-                Path { path in
-                    path.move(to: CGPoint(x: 0, y: geometry.size.height / 2))
-                    path.addLine(to: CGPoint(x: geometry.size.width, y: geometry.size.height / 2))
-                    path.move(to: CGPoint(x: 0, y: 0))
-                    path.addLine(to: CGPoint(x: 0, y: geometry.size.height))
+                    // Draw axes (adjusted for offset)
+                    Path { path in
+                        // X-axis (at the offset baseline)
+                        path.move(to: CGPoint(x: 0, y: baselineOffset(for: geometry.size)))
+                        path.addLine(to: CGPoint(x: geometry.size.width, y: baselineOffset(for: geometry.size)))
+
+                        // Y-axis
+                        path.move(to: CGPoint(x: 0, y: 0))
+                        path.addLine(to: CGPoint(x: 0, y: geometry.size.height))
+                    }
+                    .stroke(Color.gray)
                 }
-                .stroke(Color.gray)
             }
         }
-    }
 
-    private func normalizeData(for size: CGSize) -> [CGPoint] {
-        guard !data.isEmpty else { return [] }
+        private func normalizedDataWithOffset(for size: CGSize) -> [CGPoint] {
+            let allYValues = data.map { $0.y.toDouble() }
+            let minY = allYValues.min()!
+            let maxY = allYValues.max()!
+            let yRange = maxY - minY
 
-        let minY = data.map { $0.y.toDouble() }.min()!
-        let maxY = data.map { $0.y.toDouble() }.max()!
-        let range = max(abs(minY), abs(maxY))
+            let yScale = size.height / yRange // Single scale for the whole range
 
-        let scaleFactor = size.height / 2 / range
+            return data.map { point in
+                let normalizedY = (point.y.toDouble() - minY) * yScale
+                return CGPoint(x: 0, y: normalizedY)
+            }
+        }
 
-        return data.map { point in
-            let normalizedY = point.y.toDouble() * scaleFactor
-            return CGPoint(x: 0, y: normalizedY)
+        // Calculate the baseline offset (where 0 should be drawn)
+        private func baselineOffset(for size: CGSize) -> CGFloat {
+            let allYValues = data.map { $0.y.toDouble() }
+            let minY = allYValues.min()!
+            let yRange = allYValues.max()! - minY
+
+            let yScale = size.height / yRange
+            return size.height - (0 - minY) * yScale // Inverted Y-axis for the offset
         }
     }
-}
