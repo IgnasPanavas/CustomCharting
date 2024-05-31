@@ -105,10 +105,13 @@ public struct BarChart<T: DataPoint>: Chart {
                 }
                 .padding(.horizontal)
 
-                // Draw axes at the center of the chart
+                // Draw axes at the correct baseline
                 Path { path in
-                    path.move(to: CGPoint(x: 0, y: geometry.size.height / 2))
-                    path.addLine(to: CGPoint(x: geometry.size.width, y: geometry.size.height / 2))
+                    // Calculate the actual y-coordinate for the baseline
+                    let baselineY = geometry.size.height / 2 + (normalizeData(for: geometry.size)[0].y / 2)
+                    
+                    path.move(to: CGPoint(x: 0, y: baselineY))        // Start at the calculated baseline
+                    path.addLine(to: CGPoint(x: geometry.size.width, y: baselineY))
                     path.move(to: CGPoint(x: 0, y: 0))
                     path.addLine(to: CGPoint(x: 0, y: geometry.size.height))
                 }
