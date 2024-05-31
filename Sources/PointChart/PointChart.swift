@@ -87,25 +87,34 @@ public struct BarChart<T: DataPoint>: Chart {
         self.barSpacing = barSpacing
     }
 
-    
     public var body: some View {
         GeometryReader { geometry in
-            HStack(spacing: barSpacing) {
-                ForEach(data.indices, id: \.self) { index in
-                    VStack(alignment: .center) { // Center-align text within VStack
-                        // Calculate bar height using the generalized normalizeData method
-                        let barHeight = normalizeData(for: geometry.size)[index].y
-                        Spacer() // Push the rectangle to the bottom
-                        Rectangle()
-                            .fill(Color.blue)
-                            .frame(height: abs(barHeight)) // Use absolute value for height
-                            .offset(y: -barHeight / 2)   // Offset to center bar vertically
-                        Text(data[index].x.toDouble(), format: .number)
-                            .font(.caption)
+            ZStack {
+                // Draw axes
+                Path { path in
+                    path.move(to: CGPoint(x: 0, y: geometry.size.height))
+                    path.addLine(to: CGPoint(x: geometry.size.width, y: geometry.size.height)) // X-axis
+                    path.move(to: CGPoint(x: 0, y: 0))
+                    path.addLine(to: CGPoint(x: 0, y: geometry.size.height)) // Y-axis
+                }
+                .stroke(Color.gray)
+
+                // Draw bars
+                HStack(spacing: barSpacing) {
+                    ForEach(data.indices, id: \.self) { index in
+                        VStack(alignment: .center) {
+                            let barHeight = normalizeData(for: geometry.size)[index].y
+                            Rectangle()
+                                .fill(Color.blue)
+                                .frame(height: abs(barHeight))
+                                .offset(y: barHeight < 0 ? 0 : -barHeight) // Start from the bottom
+                            Text(data[index].x.toDouble(), format: .number)
+                                .font(.caption)
+                        }
                     }
                 }
+                .padding(.horizontal)
             }
-            .padding(.horizontal)
         }
     }
 }
