@@ -78,8 +78,7 @@ public struct LineChart<T: DataPoint>: Chart {
 }
 
 @available(iOS 15.0, *)
-public struct BarChart<T: DataPoint>: Chart {
-    public var data: [T]
+public struct BarChart<T: DataPoint>: Chart {    public var data: [T]
     var barSpacing: CGFloat = 10
 
     public init(data: [T], barSpacing: CGFloat = 10) {
@@ -89,6 +88,7 @@ public struct BarChart<T: DataPoint>: Chart {
 
     public var body: some View {
         GeometryReader { geometry in
+
             ZStack {
                 // Move the HStack inside a VStack to control padding
                 VStack(spacing: 0) { // No spacing to avoid offsetting the x-axis
@@ -110,8 +110,14 @@ public struct BarChart<T: DataPoint>: Chart {
 
                 // Draw axes at the center (no changes here)
                 Path { path in
-                    path.move(to: CGPoint(x: 0, y: geometry.size.height / 2))
-                    path.addLine(to: CGPoint(x: geometry.size.width, y: geometry.size.height / 2))
+                    // Calculate the y-coordinate for the x-axis baseline
+                    let baselineY = geometry.size.height / 2
+                    
+                    // X-axis (at the calculated baseline)
+                    path.move(to: CGPoint(x: 0, y: baselineY))
+                    path.addLine(to: CGPoint(x: geometry.size.width, y: baselineY))
+                    
+                    // Y-axis (no changes)
                     path.move(to: CGPoint(x: 0, y: 0))
                     path.addLine(to: CGPoint(x: 0, y: geometry.size.height))
                 }
