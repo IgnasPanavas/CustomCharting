@@ -1,22 +1,20 @@
 import SwiftUI
 
 // PlottableValue Protocol: Defines types that can be converted to plottable values.
-public protocol PlottableValue {
+public protocol Plottable {
     func toDouble() -> Double
 }
 
 // Chart Protocol (Updated)
 @available(iOS 13.0, *)
-public protocol Chart {
+public protocol Chart: View {
     associatedtype T: DataPoint
     var data: [T] { get }
-    associatedtype ContentView: View
-    func render() -> ContentView
 }
 // DataPoint Protocol: Defines the structure of data points for any chart.
-public protocol DataPoint: PlottableValue {
-    associatedtype T: PlottableValue
-    associatedtype U: PlottableValue
+public protocol DataPoint: Plottable {
+    associatedtype T: Plottable
+    associatedtype U: Plottable
     
     var x: T { get } // Assumes numeric X-axis for now.
     var y: U { get }
@@ -28,8 +26,11 @@ public protocol DataPoint: PlottableValue {
 public struct LineChart<T: DataPoint>: Chart {
     public var data: [T]
 
-
-    var contentView: some View {
+    public init(data: [T]) {
+        self.data = data
+    }
+    
+    public var body: some View {
         GeometryReader { geometry in
             Path { path in
                 let normalizedData = normalizeData(for: geometry.size)
@@ -54,9 +55,7 @@ public struct LineChart<T: DataPoint>: Chart {
         }
     }
     
-    public func render() -> some View {
-        contentView
-    }
+    
 
     private func normalizeData(for size: CGSize) -> [CGPoint] {
         guard !data.isEmpty else { return [] }
