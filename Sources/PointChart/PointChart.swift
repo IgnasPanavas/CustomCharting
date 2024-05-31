@@ -89,15 +89,15 @@ public struct BarChart<T: DataPoint>: Chart {
 
     public var body: some View {
         GeometryReader { geometry in
-            ZStack { // Use ZStack to overlay bars and axes
+            ZStack {
                 HStack(spacing: barSpacing) {
                     ForEach(data.indices, id: \.self) { index in
                         VStack(alignment: .center) {
-                            let barHeight = normalizeData(for: geometry.size)[index].y
-                            Spacer()
+                            let normalizedY = normalizeData(for: geometry.size)[index].y
                             Rectangle()
-                                .fill(barHeight >= 0 ? Color.blue : Color.red) // Color based on sign
-                                .frame(height: abs(barHeight))
+                                .fill(normalizedY >= 0 ? Color.blue : Color.red)
+                                .frame(height: abs(normalizedY))
+                                .offset(y: -normalizedY / 2) // Offset bars to center on baseline
                             Text(data[index].x.toDouble(), format: .number)
                                 .font(.caption)
                         }
@@ -105,13 +105,10 @@ public struct BarChart<T: DataPoint>: Chart {
                 }
                 .padding(.horizontal)
 
-                // Draw axes
+                // Draw axes at the center of the chart
                 Path { path in
-                    // X-axis (at the baseline for the bars)
                     path.move(to: CGPoint(x: 0, y: geometry.size.height / 2))
                     path.addLine(to: CGPoint(x: geometry.size.width, y: geometry.size.height / 2))
-                    
-                    // Y-axis
                     path.move(to: CGPoint(x: 0, y: 0))
                     path.addLine(to: CGPoint(x: 0, y: geometry.size.height))
                 }
@@ -125,16 +122,13 @@ public struct BarChart<T: DataPoint>: Chart {
 
         let minY = data.map { $0.y.toDouble() }.min()!
         let maxY = data.map { $0.y.toDouble() }.max()!
+        let range = max(abs(minY), abs(maxY))
 
-        // Scale factor for positive and negative values separately
-        let positiveYScale = size.height / 2 / max(maxY, 0) // Only scale by positive maximum
-        let negativeYScale = size.height / 2 / abs(min(minY, 0)) // Only scale by negative minimum
+        let scaleFactor = size.height / 2 / range
 
         return data.map { point in
-            let barHeight = point.y.toDouble() >= 0
-                ? point.y.toDouble() * positiveYScale
-                : point.y.toDouble() * negativeYScale
-            return CGPoint(x: 0, y: barHeight)  // Y value is now the offset from the baseline
+            let normalizedY = point.y.toDouble() * scaleFactor
+            return CGPoint(x: 0, y: normalizedY)
         }
     }
 }
