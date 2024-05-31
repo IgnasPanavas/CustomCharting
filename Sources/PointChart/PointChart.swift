@@ -100,8 +100,7 @@ public struct BarChart<T: DataPoint>: Chart {    public var data: [T]
                                     .fill(normalizedY >= 0 ? Color.blue : Color.red)
                                     .frame(height: abs(normalizedY))
                                     .offset(y: -normalizedY / 2) // Center bars
-                                Text(data[index].x.toDouble(), format: .number)
-                                    .font(.caption)
+                                
                             }
                         }
                     }
@@ -111,7 +110,7 @@ public struct BarChart<T: DataPoint>: Chart {    public var data: [T]
                 // Draw axes at the center (no changes here)
                 Path { path in
                     // Calculate the y-coordinate for the x-axis baseline
-                    let baselineY = geometry.size.height / 2
+                    let baselineY = normalizeData(for: geometry.size)[0].y
                     
                     // X-axis (at the calculated baseline)
                     path.move(to: CGPoint(x: 0, y: baselineY))
