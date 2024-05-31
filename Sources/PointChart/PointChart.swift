@@ -110,7 +110,7 @@ public struct BarChart<T: DataPoint>: Chart {    public var data: [T]
                 // Draw axes at the center (no changes here)
                 Path { path in
                     // Calculate the y-coordinate for the x-axis baseline
-                    let baselineY = normalizeData(for: geometry.size)[0].y
+                    let baselineY = geometry.size.height / 2
                     
                     // X-axis (at the calculated baseline)
                     path.move(to: CGPoint(x: 0, y: baselineY))
