@@ -81,28 +81,28 @@ public struct LineChart<T: DataPoint>: Chart {
 public struct BarChart<T: DataPoint>: Chart {
     public var data: [T]
     var barSpacing: CGFloat = 10
+    var chartBottomPadding: CGFloat = 20 // Add bottom padding for negative values
 
-    public init(data: [T], barSpacing: CGFloat = 10) {
+    public init(data: [T], barSpacing: CGFloat = 10, chartBottomPadding: CGFloat = 20) {
         self.data = data
         self.barSpacing = barSpacing
+        self.chartBottomPadding = chartBottomPadding
     }
 
-    @available(iOS 15.0, *)
     public var body: some View {
         GeometryReader { geometry in
-            HStack(spacing: barSpacing) {
-                ForEach(data.indices, id: \.self) { index in
-                    VStack {
-                        Spacer()
-                        Rectangle()
-                            .fill(Color.blue)
-                            .frame(height: normalizedBarHeight(for: index, in: geometry.size))
-                        Text(data[index].x.toDouble(), format: .number)
-                            .font(.caption)
+            VStack(spacing: 0) { // Use VStack for better axis alignment
+                HStack(spacing: barSpacing) {
+                    ForEach(data.indices, id: \.self) { index in
+                        BarView(height: normalizedBarHeight(for: index, in: geometry.size),
+                                label: data[index].x.toDouble())
                     }
                 }
+                .padding(.horizontal)
+                Spacer() // Push bars to the bottom
+                Divider() // Add x-axis
             }
-            .padding(.horizontal)
+            .padding(.bottom, chartBottomPadding) // Add bottom padding
         }
     }
 
@@ -112,8 +112,29 @@ public struct BarChart<T: DataPoint>: Chart {
         let minY = data.map { $0.y.toDouble() }.min()!
         let maxY = data.map { $0.y.toDouble() }.max()!
 
-        let yScale = size.height / (maxY - minY)
+        // Adjust yScale if minY is negative
+        let totalHeight = maxY - minY + (minY < 0 ? -minY : 0) // Add bottom padding for negative
+        let yScale = (size.height - chartBottomPadding) / totalHeight // Account for padding
 
-        return (data[index].y.toDouble() - minY) * yScale
+        let rawHeight = (data[index].y.toDouble() - minY) * yScale
+        return max(0, rawHeight) // Ensure bars don't go below 0
+    }
+}
+
+// Reusable BarView
+@available(iOS 15.0, *)
+struct BarView: View {
+    let height: CGFloat
+    let label: Double
+
+    
+    var body: some View {
+        VStack(spacing: 0) {
+            Rectangle()
+                .fill(Color.blue)
+                .frame(height: height)
+            Text(label, format: .number)
+                .font(.caption)
+        }
     }
 }
