@@ -90,28 +90,28 @@ public struct BarChart<T: DataPoint>: Chart {
     public var body: some View {
         GeometryReader { geometry in
             ZStack {
-                HStack(spacing: barSpacing) {
-                    ForEach(data.indices, id: \.self) { index in
-                        VStack(alignment: .center) {
-                            let normalizedY = normalizeData(for: geometry.size)[index].y
-                            Rectangle()
-                                .fill(normalizedY >= 0 ? Color.blue : Color.red)
-                                .frame(height: abs(normalizedY))
-                                .offset(y: -normalizedY / 2) // Offset bars to center on baseline
-                            Text(data[index].x.toDouble(), format: .number)
-                                .font(.caption)
+                // Move the HStack inside a VStack to control padding
+                VStack(spacing: 0) { // No spacing to avoid offsetting the x-axis
+                    HStack(spacing: barSpacing) {
+                        ForEach(data.indices, id: \.self) { index in
+                            VStack(alignment: .center) {
+                                let normalizedY = normalizeData(for: geometry.size)[index].y
+                                Rectangle()
+                                    .fill(normalizedY >= 0 ? Color.blue : Color.red)
+                                    .frame(height: abs(normalizedY))
+                                    .offset(y: -normalizedY / 2) // Center bars
+                                Text(data[index].x.toDouble(), format: .number)
+                                    .font(.caption)
+                            }
                         }
                     }
+                    .padding(.horizontal) // Apply padding to the HStack only
                 }
-                .padding(.horizontal)
 
-                // Draw axes at the correct baseline
+                // Draw axes at the center (no changes here)
                 Path { path in
-                    // Calculate the actual y-coordinate for the baseline
-                    let baselineY = geometry.size.height / 2 + (normalizeData(for: geometry.size)[0].y / 2)
-                    
-                    path.move(to: CGPoint(x: 0, y: baselineY))        // Start at the calculated baseline
-                    path.addLine(to: CGPoint(x: geometry.size.width, y: baselineY))
+                    path.move(to: CGPoint(x: 0, y: geometry.size.height / 2))
+                    path.addLine(to: CGPoint(x: geometry.size.width, y: geometry.size.height / 2))
                     path.move(to: CGPoint(x: 0, y: 0))
                     path.addLine(to: CGPoint(x: 0, y: geometry.size.height))
                 }
