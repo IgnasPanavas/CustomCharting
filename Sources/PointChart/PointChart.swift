@@ -220,16 +220,11 @@ public struct BarChart<T: DataPoint>: Chart {
                     HStack(spacing: barSpacing) {
                         ForEach(data.indices, id: \.self) { index in
                             VStack(alignment: .center) {
-                                let normalizedY = normalizedYValues[index].y
-                                
+                                let barHeight = normalizeData(for: geometry.size)[index].y
                                 Rectangle()
-                                    .fill(normalizedY >= 0 ? Color.blue : Color.red)
-                                    .frame(height: abs(normalizedY))
-                                    .offset(y: -normalizedY / 2) // Center bars
-                                    .onAppear {
-                                        print(normalizedY)
-                                    }
-                                
+                                    .fill(Color.blue)
+                                    .frame(height: abs(barHeight))
+                                    .offset(y: barHeight < 0 ? 0 : -barHeight) // Start from the bottom
                             }
                         }
                     }
