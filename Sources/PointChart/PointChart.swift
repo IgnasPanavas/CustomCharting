@@ -167,7 +167,7 @@ public struct LineChart<T: DataPoint>: Chart {
                 
                 let minY = data.map { $0.y.toDouble() }.min()!
                 
-                let baselineY = minY < 0 ? -(minY/(maxY-minY))*geometry.size.height : geometry.size.height
+                let baselineY = minY < 0 ? -(1-(minY/(maxY-minY)))*geometry.size.height : geometry.size.height
                 
                 path.move(to: CGPoint(x: 0, y: baselineY))
                 path.addLine(to: CGPoint(x: geometry.size.width, y: baselineY)) // X-axis
