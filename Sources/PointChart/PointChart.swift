@@ -202,7 +202,7 @@ public struct BarChart<T: DataPoint>: Chart {
     public var data: [T]
     var barSpacing: CGFloat = 10
 
-    public init(data: [T], barSpacing: CGFloat = 10) {
+    public init(data: [T], barSpacing: CGFloat = 0) {
         self.data = data
         self.barSpacing = barSpacing
     }
