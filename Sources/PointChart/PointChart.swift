@@ -213,18 +213,22 @@ public struct BarChart<T: DataPoint>: Chart {
 
     public var body: some View {
         GeometryReader { geometry in
-
+            let normalizedYValues = normalizeData(for: geometry.size)
             ZStack {
                 // Move the HStack inside a VStack to control padding
                 VStack(spacing: 0) { // No spacing to avoid offsetting the x-axis
                     HStack(spacing: barSpacing) {
                         ForEach(data.indices, id: \.self) { index in
                             VStack(alignment: .center) {
-                                let normalizedY = normalizeData(for: geometry.size)[index].y
+                                let normalizedY = normalizedYValues[index].y
+                                
                                 Rectangle()
                                     .fill(normalizedY >= 0 ? Color.blue : Color.red)
                                     .frame(height: abs(normalizedY))
                                     .offset(y: -normalizedY / 2) // Center bars
+                                    .onAppear {
+                                        print(normalizedY)
+                                    }
                                 
                             }
                         }
