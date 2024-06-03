@@ -76,7 +76,7 @@ public protocol Chart: View {
 /// Defines the structure of individual data points for use in charts.
 ///
 /// Data points typically contain at least two plottable values (`x` and `y`) and can include additional metadata for styling or interactions.
-public protocol DataPoint: Identifiable, Hashable {
+public protocol DataPoint: Identifiable, Hashable, Comparable {
 
     /// The type of plottable value used for the x-axis.
     associatedtype T: Plottable
@@ -148,8 +148,8 @@ public struct LineChart<T: DataPoint>: Chart {
     
     public var body: some View {
         GeometryReader { geometry in
+            let normalizedData = normalizeData(for: geometry.size)
             Path { path in
-                let normalizedData = normalizeData(for: geometry.size)
                 for (index, point) in normalizedData.enumerated() {
                     if index == 0 {
                         path.move(to: point)
@@ -163,7 +163,11 @@ public struct LineChart<T: DataPoint>: Chart {
             // Draw axes (you can customize styling)
             Path { path in
                 
-                let baselineY = geometry.size.height / 2
+                let maxY = data.map { $0.y.toDouble() }.max()!
+                
+                let minY = data.map { $0.y.toDouble() }.min()!
+                
+                let baselineY = (maxY + abs(minY))/2
                 
                 path.move(to: CGPoint(x: 0, y: baselineY))
                 path.addLine(to: CGPoint(x: geometry.size.width, y: baselineY)) // X-axis
