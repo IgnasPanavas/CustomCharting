@@ -225,7 +225,7 @@ public struct BarChart<T: DataPoint>: Chart {
                                 
                                 Rectangle()
                                     .fill(normalizedY >= 0 ? Color.blue : Color.red)
-                                    .frame(height: abs(normalizedY) + geometry.size.height/2)
+                                    .frame(height: -abs(normalizedY) + geometry.size.height/2)
                                     .offset(y: -normalizedY / 2) // Center bars
                                     .onAppear {
                                         print(normalizedY)
