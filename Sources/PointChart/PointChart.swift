@@ -168,7 +168,7 @@ public struct LineChart<T: DataPoint>: Chart {
                 path.move(to: CGPoint(x: 0, y: baselineY))
                 path.addLine(to: CGPoint(x: geometry.size.width, y: baselineY)) // X-axis
                 path.move(to: CGPoint(x: 0, y: 0))
-                path.addLine(to: CGPoint(x: 0, y: baselineY)) // Y-axis
+                path.addLine(to: CGPoint(x: 0, y: geometry.size.height)) // Y-axis
             }
             .stroke(Color.gray)
         }
