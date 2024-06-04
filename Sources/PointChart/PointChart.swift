@@ -225,11 +225,8 @@ public struct BarChart<T: DataPoint>: Chart {
                                 
                                 Rectangle()
                                     .fill(normalizedY >= 0 ? Color.blue : Color.red)
-                                    .frame(height: -abs(normalizedY) + geometry.size.height/2)
+                                    .frame(height: abs(normalizedY))
                                     .offset(y: -normalizedY / 2) // Center bars
-                                    .onAppear {
-                                        print(normalizedY)
-                                    }
                                 
                             }
                         }
@@ -254,6 +251,21 @@ public struct BarChart<T: DataPoint>: Chart {
             }
         }
     }
-    
+    func normalizeData(for size: CGSize) -> [CGPoint] {
+        guard !data.isEmpty else { return [] }
+
+        let minX = data.map { $0.x.toDouble() }.min()!
+        let maxX = data.map { $0.x.toDouble() }.max()!
+        let maxY = max(abs(data.map { $0.y.toDouble() }.min() ?? 0), data.map { $0.y.toDouble() }.max() ?? 0)
+
+        let xScale = size.width / (maxX - minX)
+        let yScale = size.height / (2 * maxY) // Divide by 2 * maxY to account for both positive and negative values
+
+        return data.map { point in
+            let normalizedX = (point.x.toDouble() - minX) * xScale
+            let normalizedY = (point.y.toDouble() / maxY) * yScale // Normalize y-values and account for negative values
+            return CGPoint(x: normalizedX, y: normalizedY)
+        }
+    }
 
 }
