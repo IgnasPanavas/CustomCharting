@@ -203,7 +203,7 @@ public struct LineChart<T: DataPoint>: Chart {
 /// BarChart(data: sampleData, barSpacing: 15) // Creates the bar chart with custom spacing
 /// ```
 public struct BarChart<T: DataPoint>: Chart {
-    
+
     public var data: [T]
     var barSpacing: CGFloat = 10
 
@@ -214,20 +214,22 @@ public struct BarChart<T: DataPoint>: Chart {
 
     public var body: some View {
         GeometryReader { geometry in
-            let normalizedYValues = normalizeData(for: geometry.size)
+            let normalizedData = normalizeData(for: geometry.size)
             ZStack {
-                // Move the HStack inside a VStack to control padding
-                VStack(spacing: 0) { // No spacing to avoid offsetting the x-axis
+                VStack(spacing: 0) {
                     HStack(spacing: barSpacing) {
                         ForEach(data.indices, id: \.self) { index in
                             VStack(alignment: .center) {
-                                let normalizedY = normalizedYValues[index].y
-                                
+                                let normalizedPoint = normalizedData[index]
+                                let barHeight = (normalizedPoint.y - geometry.size.height / 2) * -1
+
                                 Rectangle()
-                                    .fill(normalizedY >= 0 ? Color.blue : Color.red)
-                                    .frame(height: abs(normalizedY))
-                                    .offset(y: -normalizedY / 2) // Center bars
-                                
+                                    .fill(normalizedPoint.y >= geometry.size.height / 2 ? Color.blue : Color.red)
+                                    .frame(height: barHeight)
+                                    .offset(y: normalizedPoint.y - barHeight / 2) // Center bars
+                                    .onAppear {
+                                        print(normalizedPoint)
+                                    }
                             }
                         }
                     }
@@ -238,11 +240,11 @@ public struct BarChart<T: DataPoint>: Chart {
                 Path { path in
                     // Calculate the y-coordinate for the x-axis baseline
                     let baselineY = geometry.size.height / 2
-                    
+
                     // X-axis (at the calculated baseline)
                     path.move(to: CGPoint(x: 0, y: baselineY))
                     path.addLine(to: CGPoint(x: geometry.size.width, y: baselineY))
-                    
+
                     // Y-axis (no changes)
                     path.move(to: CGPoint(x: 0, y: 0))
                     path.addLine(to: CGPoint(x: 0, y: geometry.size.height))
@@ -251,21 +253,22 @@ public struct BarChart<T: DataPoint>: Chart {
             }
         }
     }
+
     func normalizeData(for size: CGSize) -> [CGPoint] {
         guard !data.isEmpty else { return [] }
 
         let minX = data.map { $0.x.toDouble() }.min()!
         let maxX = data.map { $0.x.toDouble() }.max()!
-        let maxY = max(abs(data.map { $0.y.toDouble() }.min() ?? 0), data.map { $0.y.toDouble() }.max() ?? 0)
+        let minY = data.map { $0.y.toDouble() }.min()!
+        let maxY = data.map { $0.y.toDouble() }.max()!
 
         let xScale = size.width / (maxX - minX)
-        let yScale = size.height / (2 * maxY) // Divide by 2 * maxY to account for both positive and negative values
+        let yScale = size.height / (maxY - minY)
 
         return data.map { point in
             let normalizedX = (point.x.toDouble() - minX) * xScale
-            let normalizedY = (point.y.toDouble() / maxY) * yScale // Normalize y-values and account for negative values
+            let normalizedY = size.height - (point.y.toDouble() - minY) * yScale // Invert Y-axis
             return CGPoint(x: normalizedX, y: normalizedY)
         }
     }
-
 }
