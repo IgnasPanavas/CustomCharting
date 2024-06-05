@@ -292,7 +292,7 @@ public struct StackedBarChart<T: DataPoint>: Chart {
                 // Move the HStack inside a VStack to control padding
                 VStack(spacing: 0) { // No spacing to avoid offsetting the x-axis
                     HStack(spacing: barSpacing) {
-                        ForEach(data.indices, id: \.self) { index in
+                        ForEach(normalizedYValues.indices, id: \.self) { index in
                             VStack(alignment: .center) {
                                 let normalizedY = normalizedYValues[index].y
                                 
