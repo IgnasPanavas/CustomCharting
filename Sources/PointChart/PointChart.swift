@@ -328,36 +328,28 @@ public struct StackedBarChart<T: DataPoint>: Chart {
     func normalizeData(for size: CGSize) -> [CGPoint] {
         guard !data.isEmpty else { return [] }
         
-        // Calculate min and max values for normalization
         let minX = data.map { $0.x.toDouble() }.min()!
         let maxX = data.map { $0.x.toDouble() }.max()!
         let minY = data.map { $0.y.toDouble() }.min()!
         let maxY = data.map { $0.y.toDouble() }.max()!
         
         let xScale = size.width / (maxX - minX)
+        
+        // Find the absolute maximum value to determine the full scale of the y-axis
         let absMaxY = max(abs(minY), abs(maxY))
-        let yScale = size.height / absMaxY
+        let yScale = size.height / absMaxY  // **Change here** to normalize based on the absolute maximum value.
         
-        // We need to group data points with the same x-value
-        let groupedData = Dictionary(grouping: data, by: { $0.x })
+        var stackedYValues: [CGFloat] = Array(repeating: 0, count: data.count) // **New array to store stacked Y values for each x**
         
-        var normalizedPoints: [CGPoint] = []
-        
-        groupedData.forEach { (xValue, dataPoints) in
-            var previousY: CGFloat = 0
-            let sortedDataPoints = dataPoints.sorted { $0.y < $1.y } // Sorting data points by y-value to ensure correct stacking.
-            for point in sortedDataPoints {
-                let normalizedX = CGFloat(point.x.toDouble() - minX) * xScale
-                let normalizedY = CGFloat(point.y.toDouble()) * yScale / 2
-                
-                // Calculate the stacked Y value
-                let stackedY = normalizedY + previousY
-                previousY = stackedY
-                
-                normalizedPoints.append(CGPoint(x: normalizedX, y: stackedY))
-            }
+        return data.enumerated().map { index, point in
+            let normalizedX = CGFloat(point.x.toDouble() - minX) * xScale
+            let normalizedY = (CGFloat(point.y.toDouble()) * yScale) / 2 // **Change here** to center the bars around the x-axis.
+            
+            // **Calculate the stacked Y value for the current x**
+            let stackedY = normalizedY + stackedYValues[index]
+            stackedYValues[index] = stackedY
+            
+            return CGPoint(x: normalizedX, y: stackedY)
         }
-        
-        return normalizedPoints
     }
 }
