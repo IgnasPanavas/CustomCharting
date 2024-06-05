@@ -254,20 +254,21 @@ public struct BarChart<T: DataPoint>: Chart {
     func normalizeData(for size: CGSize) -> [CGPoint] {
         guard !data.isEmpty else { return [] }
         
-        let minX = data.map({ $0.x.toDouble() }).min()!
-        let maxX = data.map({ $0.x.toDouble() }).max()!
-        
-        let minY = data.map({ $0.y.toDouble() }).min()!
-        let maxY = data.map({ $0.y.toDouble() }).max()!
+        let minX = data.map { $0.x.toDouble() }.min()!
+        let maxX = data.map { $0.x.toDouble() }.max()!
+        let minY = data.map { $0.y.toDouble() }.min()!
+        let maxY = data.map { $0.y.toDouble() }.max()!
 
         let xScale = size.width / (maxX - minX)
-        let yScale = size.height / (2 * max(abs(minY), abs(maxY))) // Scale factor to fit in the view's height
-        let absMaxY = max(abs(minY), abs(maxY)) // Maximum absolute value of y
+
+        // Find the absolute maximum value to determine the full scale of the y-axis
+        let absMaxY = max(abs(minY), abs(maxY))
+        let yScale = size.height / absMaxY  // **Change here** to normalize based on the absolute maximum value.
 
         return data.map { point in
-            let normalizedX = CGFloat((point.x.toDouble() - minX) * xScale)
-            let normalizedY = CGFloat((point.y.toDouble() / absMaxY) * yScale) // Normalize y-value by absolute maxY
+            let normalizedX = CGFloat(point.x.toDouble() - minX) * xScale
+            let normalizedY = (CGFloat(point.y.toDouble()) * yScale) / 2 // **Change here** to center the bars around the x-axis.
             return CGPoint(x: normalizedX, y: normalizedY)
         }
-    }
+    } 
 }
