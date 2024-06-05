@@ -367,5 +367,5 @@ public struct StackedBarChart<T: DataPoint>: Chart {
         }
         
         return normalizedYValues
-    } 
+    }
 }
