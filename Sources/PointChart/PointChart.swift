@@ -272,3 +272,84 @@ public struct BarChart<T: DataPoint>: Chart {
         }
     } 
 }
+
+
+@available(iOS 13.0, *)
+public struct StackedBarChart<T: DataPoint>: Chart {
+    
+    public var data: [T]
+    var barSpacing: CGFloat = 10
+    
+    public init(data: [T], barSpacing: CGFloat = 10) {
+        self.data = data
+        self.barSpacing = barSpacing
+    }
+    
+    public var body: some View {
+        GeometryReader { geometry in
+            let normalizedYValues = normalizeData(for: geometry.size)
+            ZStack {
+                // Move the HStack inside a VStack to control padding
+                VStack(spacing: 0) { // No spacing to avoid offsetting the x-axis
+                    HStack(spacing: barSpacing) {
+                        ForEach(data.indices, id: \.self) { index in
+                            VStack(alignment: .center) {
+                                let normalizedY = normalizedYValues[index].y
+                                
+                                Rectangle()
+                                    .fill(normalizedY >= 0 ? Color.blue : Color.red)
+                                    .frame(height: abs(normalizedY))
+                                    .offset(y: -normalizedY / 2) // Center bars
+                                
+                            }
+                        }
+                    }
+                    .padding(.horizontal) // Apply padding to the HStack only
+                }
+                
+                // Draw axes at the center (no changes here)
+                Path { path in
+                    // Calculate the y-coordinate for the x-axis baseline
+                    let baselineY = geometry.size.height / 2
+                    
+                    // X-axis (at the calculated baseline)
+                    path.move(to: CGPoint(x: 0, y: baselineY))
+                    path.addLine(to: CGPoint(x: geometry.size.width, y: baselineY))
+                    
+                    // Y-axis (no changes)
+                    path.move(to: CGPoint(x: 0, y: 0))
+                    path.addLine(to: CGPoint(x: 0, y: geometry.size.height))
+                }
+                .stroke(Color.gray)
+            }
+        }
+    }
+    
+    func normalizeData(for size: CGSize) -> [CGPoint] {
+        guard !data.isEmpty else { return [] }
+        
+        let minX = data.map { $0.x.toDouble() }.min()!
+        let maxX = data.map { $0.x.toDouble() }.max()!
+        let minY = data.map { $0.y.toDouble() }.min()!
+        let maxY = data.map { $0.y.toDouble() }.max()!
+        
+        let xScale = size.width / (maxX - minX)
+        
+        // Find the absolute maximum value to determine the full scale of the y-axis
+        let absMaxY = max(abs(minY), abs(maxY))
+        let yScale = size.height / absMaxY  // **Change here** to normalize based on the absolute maximum value.
+        
+        var previousY: CGFloat = 0 // **New variable to keep track of the previous Y value for stacking**
+        
+        return data.map { point in
+            let normalizedX = CGFloat(point.x.toDouble() - minX) * xScale
+            let normalizedY = (CGFloat(point.y.toDouble()) * yScale) / 2 // **Change here** to center the bars around the x-axis.
+            
+            // **Calculate the stacked Y value**
+            let stackedY = normalizedY + previousY
+            previousY = stackedY
+            
+            return CGPoint(x: normalizedX, y: stackedY)
+        }
+    }
+}
