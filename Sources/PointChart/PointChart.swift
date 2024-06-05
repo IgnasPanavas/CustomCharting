@@ -253,20 +253,21 @@ public struct BarChart<T: DataPoint>: Chart {
     }
     func normalizeData(for size: CGSize) -> [CGPoint] {
         guard !data.isEmpty else { return [] }
-
-        let minX = data.map { $0.x.toDouble() }.min()!
-        let maxX = data.map { $0.x.toDouble() }.max()!
-        let minY = data.map { $0.y.toDouble() }.min() ?? 0
-        let maxY = data.map { $0.y.toDouble() }.max() ?? 0
+        
+        let minX = data.map({ $0.x.toDouble() }).min()!
+        let maxX = data.map({ $0.x.toDouble() }).max()!
+        
+        let minY = data.map({ $0.y.toDouble() }).min()!
+        let maxY = data.map({ $0.y.toDouble() }).max()!
 
         let xScale = size.width / (maxX - minX)
-        let yScale = size.height / (2 * max(abs(minY), abs(maxY))) // Divide by 2 * max(abs(minY), abs(maxY)) to account for both positive and negative values
+        let yScale = size.height / (2 * max(abs(minY), abs(maxY))) // Scale factor to fit in the view's height
+        let absMaxY = max(abs(minY), abs(maxY)) // Maximum absolute value of y
 
         return data.map { point in
-            let normalizedX = (point.x.toDouble() - minX) * xScale
-            let normalizedY = (point.y.toDouble() / max(abs(minY), abs(maxY))) * yScale // Normalize y-values and account for negative values
+            let normalizedX = CGFloat((point.x.toDouble() - minX) * xScale)
+            let normalizedY = CGFloat((point.y.toDouble() / absMaxY) * yScale) // Normalize y-value by absolute maxY
             return CGPoint(x: normalizedX, y: normalizedY)
         }
     }
-
 }
