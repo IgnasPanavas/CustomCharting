@@ -326,45 +326,45 @@ public struct StackedBarChart<T: DataPoint>: Chart {
     }
     
     func normalizeData(for size: CGSize) -> [(y: CGFloat, width: CGFloat, offset: CGFloat)] {
-        guard !data.isEmpty else { return [] }
-        
-        // Calculate min and max values for x and y axes
-        let xValues = data.map { $0.x.toDouble() }
-        let minX = xValues.min()!
-        let maxX = xValues.max()!
-        let yValues = data.map { $0.y.toDouble() }
-        let minY = yValues.min()!
-        let maxY = yValues.max()!
-
-        let xScale = size.width / (maxX - minX)
-        let absMaxY = max(abs(minY), abs(maxY))
-        let yScale = size.height / absMaxY
-
-        var normalizedYValues: [(y: CGFloat, width: CGFloat, offset: CGFloat)] = []
-        var xToYValues: [Double: [Double]] = [:]
-
-        // Group data points with the same x value
-        for point in data {
-            let xValue = point.x.toDouble()
-            xToYValues[xValue, default: []].append(point.y.toDouble())
-        }
-
-        for x in stride(from: minX, through: maxX, by: 1) {
-            if let yValuesForX = xToYValues[x] {
-                let totalY = yValuesForX.reduce(0, +)
-                let normalizedY = (CGFloat(totalY) * yScale) / 2
-                let width = CGFloat(xScale)
+            guard !data.isEmpty else { return [] }
+            
+            let minX = data.first!.x.toDouble()
+            let maxX = data.last!.x.toDouble()
+            let minY = data.map { $0.y.toDouble() }.min()!
+            let maxY = data.map { $0.y.toDouble() }.max()!
+            
+            let xScale = size.width / (maxX - minX)
+            let absMaxY = max(abs(minY), abs(maxY))
+            let yScale = size.height / absMaxY
+            
+            var normalizedYValues: [(y: CGFloat, width: CGFloat, offset: CGFloat)] = []
+            var currentX: Double = minX
+            
+            // Create a dictionary to store the sum of y values for each x value
+            var stackedYValues: [Double: Double] = [:]
+            
+            for point in data {
+                let xValue = point.x.toDouble()
+                let yValue = point.y.toDouble()
                 
-                normalizedYValues.append((y: normalizedY, width: width, offset: 0))
+                // If the current x value is different from the previous one, start a new bar
+                if xValue != currentX {
+                    normalizedYValues.append((y: CGFloat(stackedYValues[xValue] ?? 0) * yScale / 2,
+                                              width: CGFloat(xValue - currentX) * xScale,
+                                              offset: 0))
+                    currentX = xValue
+                }
+                
+                // Update the sum of y values for the current x value
+                stackedYValues[xValue] = (stackedYValues[xValue] ?? 0) + yValue
             }
+            
+            // Calculate the offset for each bar to center them horizontally
+            for index in normalizedYValues.indices {
+                let offset = normalizedYValues[index].width / 2
+                normalizedYValues[index].offset = offset
+            }
+            
+            return normalizedYValues
         }
-        
-        // Calculate the offset for each bar to center them horizontally
-        for index in normalizedYValues.indices where index > 0 {
-            let previousBar = normalizedYValues[index - 1]
-            normalizedYValues[index].offset = previousBar.offset + previousBar.width
-        }
-        
-        return normalizedYValues
-    } 
 }
