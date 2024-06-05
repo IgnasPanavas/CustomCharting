@@ -329,41 +329,43 @@ public struct StackedBarChart<T: DataPoint>: Chart {
     func normalizeData(for size: CGSize) -> [(y: CGFloat, width: CGFloat, offset: CGFloat)] {
         guard !data.isEmpty else { return [] }
         
+        // Calculate min and max values for x and y axes
         let xValues = data.map { $0.x.toDouble() }
         let minX = xValues.min()!
         let maxX = xValues.max()!
         let yValues = data.map { $0.y.toDouble() }
         let minY = yValues.min()!
         let maxY = yValues.max()!
-        
+
         let xScale = size.width / (maxX - minX)
         let absMaxY = max(abs(minY), abs(maxY))
         let yScale = size.height / absMaxY
-        
+
         var normalizedYValues: [(y: CGFloat, width: CGFloat, offset: CGFloat)] = []
         var xToYValues: [Double: [Double]] = [:]
-        
-        // Group data points with the same x value.
+
+        // Group data points with the same x value
         for point in data {
             let xValue = point.x.toDouble()
             xToYValues[xValue, default: []].append(point.y.toDouble())
         }
-           
+
         for x in stride(from: minX, through: maxX, by: 1) {
             if let yValuesForX = xToYValues[x] {
                 let totalY = yValuesForX.reduce(0, +)
                 let normalizedY = (CGFloat(totalY) * yScale) / 2
                 let width = CGFloat(xScale)
+                
                 normalizedYValues.append((y: normalizedY, width: width, offset: 0))
             }
         }
         
-         // Calculate the offset for each bar to center them horizontally
-         for index in normalizedYValues.indices where index > 0 {
-             let previousBar = normalizedYValues[index - 1]
-             normalizedYValues[index].offset = previousBar.offset + previousBar.width
-         }
-          
+        // Calculate the offset for each bar to center them horizontally
+        for index in normalizedYValues.indices where index > 0 {
+            let previousBar = normalizedYValues[index - 1]
+            normalizedYValues[index].offset = previousBar.offset + previousBar.width
+        }
+        
         return normalizedYValues
-    }
+    } 
 }
